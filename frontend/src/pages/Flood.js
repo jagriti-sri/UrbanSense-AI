@@ -22,6 +22,9 @@ const chartOptions = {
 }
 
 function Flood() {
+  const riskLevels = ["Low", "Medium", "High"];
+const risk = riskLevels[Math.floor(Math.random() * 3)];
+
   return (
     <>
       <PageTitle>Flood Monitoring</PageTitle>
@@ -40,8 +43,16 @@ function Flood() {
         </div>
 
         <div className="p-4 bg-white rounded shadow">
-          <p className="text-sm text-gray-600">Risk Level</p>
-          <h3 className="text-xl font-bold text-orange-500">Medium</h3>
+          <span className={`px-3 py-1 rounded-full text-white text-sm ${
+  risk === "High"
+    ? "bg-red-600"
+    : risk === "Medium"
+    ? "bg-yellow-500"
+    : "bg-green-600"
+}`}>
+  {risk}
+</span>
+
         </div>
 
         <div className="p-4 bg-white rounded shadow">
@@ -57,6 +68,15 @@ function Flood() {
           <Line data={floodPrediction} options={chartOptions} />
         </div>
       </ChartCard>
+        <div className="p-6 bg-white rounded-lg shadow mb-6">
+  <h3 className="text-lg font-semibold mb-4">
+    Affected Area Map
+  </h3>
+
+  <div className="h-64 bg-gray-200 rounded flex items-center justify-center">
+    Map Data From Backend Will Appear Here
+  </div>
+</div>
 
       {/* Action Section */}
       <div className="mt-8 bg-white p-6 rounded shadow">
@@ -76,7 +96,83 @@ function Flood() {
         </div>
 
       </div>
+       {/* Drainage + Soil */}
+<div className="grid grid-cols-2 gap-4 mb-6">
+
+  <div className="p-4 bg-white rounded-lg shadow">
+    <h4 className="text-sm text-gray-500">Drainage Capacity</h4>
+    <p className="text-2xl font-bold text-green-600">72%</p>
+  </div>
+
+  <div className="p-4 bg-white rounded-lg shadow">
+    <h4 className="text-sm text-gray-500">Soil Absorption</h4>
+    <p className="text-2xl font-bold text-red-600">Low</p>
+  </div>
+
+</div>
+
+
+{/* Flood Risk Map */}
+<div className="p-6 bg-white rounded-lg shadow mb-6">
+
+  <h3 className="mb-4 font-semibold text-lg">Flood Risk Map</h3>
+
+  <div className="h-56 bg-gray-200 flex items-center justify-center rounded">
+    <p className="text-gray-600">
+      Map Visualization (Live Zones)
+    </p>
+  </div>
+
+  <div className="flex gap-4 mt-4 text-sm">
+
+    <span className="text-red-600">■ High</span>
+    <span className="text-orange-500">■ Medium</span>
+    <span className="text-green-600">■ Safe</span>
+
+  </div>
+
+</div>
+  {/* Critical Locations */}
+<div className="p-6 bg-white rounded-lg shadow mb-6">
+
+  <h3 className="mb-4 font-semibold text-lg">
+    Critical Locations
+  </h3>
+
+  <table className="w-full text-sm">
+
+    <thead>
+      <tr className="border-b">
+        <th className="text-left py-2">Location</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+
+      <tr className="border-b">
+        <td className="py-2">Road 21</td>
+        <td className="text-red-600">Waterlogging</td>
+      </tr>
+
+      <tr className="border-b">
+        <td className="py-2">Bridge 3</td>
+        <td className="text-orange-500">Overflow Risk</td>
+      </tr>
+
+      <tr>
+        <td className="py-2">Sector 5</td>
+        <td className="text-yellow-600">Low Drainage</td>
+      </tr>
+
+    </tbody>
+
+  </table>
+
+</div>
+
     </>
+     
   )
 }
 

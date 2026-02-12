@@ -73,6 +73,76 @@ function AQI() {
         </ul>
 
       </div>
+      {/* Pollution Sources */}
+<div className="p-6 bg-white rounded-lg shadow mb-6">
+
+  <h3 className="mb-4 font-semibold text-lg">
+    Major Pollution Sources
+  </h3>
+
+  <div className="grid grid-cols-2 gap-4 text-sm">
+
+    <p>🚗 Traffic: <b>42%</b></p>
+    <p>🏭 Industry: <b>31%</b></p>
+    <p>🔥 Burning: <b>17%</b></p>
+    <p>🌫 Dust: <b>10%</b></p>
+
+  </div>
+
+</div>
+   <div className="p-6 bg-white rounded-lg shadow mb-6">
+  <h3 className="text-lg font-semibold mb-4">Area-wise AQI</h3>
+
+  <table className="w-full border-collapse text-left">
+    <thead>
+      <tr className="border-b">
+        <th className="py-2 w-1/3">Area</th>
+        <th className="py-2 w-1/3 text-center">AQI</th>
+        <th className="py-2 w-1/3 text-center">Status</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr className="border-b">
+        <td className="py-2">Zone A</td>
+        <td className="py-2 text-center">190</td>
+        <td className="py-2 text-center text-red-500">Unhealthy</td>
+      </tr>
+
+      <tr className="border-b">
+        <td className="py-2">Zone B</td>
+        <td className="py-2 text-center">160</td>
+        <td className="py-2 text-center text-orange-500">Poor</td>
+      </tr>
+
+      <tr>
+        <td className="py-2">Zone C</td>
+        <td className="py-2 text-center">120</td>
+        <td className="py-2 text-center text-green-500">Moderate</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+     
+     {/* Policy Suggestions */}
+<div className="p-6 bg-white rounded-lg shadow">
+
+  <h3 className="mb-4 font-semibold text-lg">
+    Suggested Measures
+  </h3>
+
+  <ul className="list-disc ml-6 text-sm text-gray-700">
+
+    <li>Traffic restrictions</li>
+    <li>Construction halt</li>
+    <li>Water sprinkling</li>
+    <li>Public advisory</li>
+
+  </ul>
+
+</div>
+
     </>
   )
 }

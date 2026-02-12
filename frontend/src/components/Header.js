@@ -87,17 +87,18 @@ function Header() {
               isOpen={isNotificationsMenuOpen}
               onClose={() => setIsNotificationsMenuOpen(false)}
             >
-              <DropdownItem tag="a" href="#" className="justify-between">
-                <span>Messages</span>
-                <Badge type="danger">13</Badge>
-              </DropdownItem>
-              <DropdownItem tag="a" href="#" className="justify-between">
-                <span>Sales</span>
-                <Badge type="danger">2</Badge>
-              </DropdownItem>
-              <DropdownItem onClick={() => alert('Alerts!')}>
-                <span>Alerts</span>
-              </DropdownItem>
+              <DropdownItem>
+  <span>🚨 Flood Risk High - Zone B</span>
+</DropdownItem>
+
+<DropdownItem>
+  <span>🌫 AQI Critical - Zone A</span>
+</DropdownItem>
+
+<DropdownItem>
+  <span>♻ Bin Overflow - Sector 5</span>
+</DropdownItem>
+
             </Dropdown>
           </li>
           {/* <!-- Profile menu --> */}
