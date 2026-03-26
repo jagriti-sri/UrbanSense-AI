@@ -1,0 +1,27 @@
+.auth-page { display: grid; place-items: center; min-height: calc(100vh - 220px); }
+.auth-shell {
+  width: min(960px, 100%);
+  background: white;
+  border-radius: 28px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  box-shadow: var(--shadow);
+}
+.auth-panel { padding: 34px; }
+.auth-panel--visual {
+  background: linear-gradient(135deg, var(--teal), var(--green));
+  color: white;
+  display: grid;
+  place-items: center;
+}
+.auth-form-box h1 { margin: 0 0 12px; font-family: 'Baloo 2', cursive; font-size: 36px; }
+.auth-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+.auth-tabs button {
+  border: none; background: var(--gray-100); padding: 10px 16px; border-radius: 12px; cursor: pointer; font-weight: 700;
+}
+.auth-tabs button.active { background: var(--teal-light); color: var(--teal-dark); }
+.auth-pill { background: rgba(255,255,255,0.14); }
+@media (max-width: 800px) {
+  .auth-shell { grid-template-columns: 1fr; }
+}
