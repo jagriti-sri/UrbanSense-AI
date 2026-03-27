@@ -1,59 +1,109 @@
-export const getDistanceFromSea = async (lat, lon) => {
+const OVERPASS =
+"https://overpass.kumi.systems/api/interpreter";
+
+
+export const getDistanceFromSea =
+async (lat, lon, elevation) => {
 
 try {
 
 const query = `
-[out:json];
+[out:json][timeout:20];
 (
-way["natural"="coastline"](around:5000,${lat},${lon});
+way["natural"="water"]["water"="sea"](around:60000,${lat},${lon});
+relation["natural"="water"]["water"="sea"](around:60000,${lat},${lon});
+node["place"="sea"](around:60000,${lat},${lon});
 );
 out center;
 `;
 
 const response =
 await fetch(
-"https://overpass-api.de/api/interpreter",
+
+OVERPASS,
+
 {
 method:"POST",
-body:query
-});
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body:
+"data=" + encodeURIComponent(query)
+
+}
+
+);
 
 const data =
 await response.json();
 
-if(!data.elements?.length)
-return 999;
 
+if(data.elements?.length){
 
-const element =
-data.elements[0];
+let minDistance = Infinity;
 
-const distance =
-Math.sqrt(
-(lat-element.center.lat)**2 +
-(lon-element.center.lon)**2
+for(const element of data.elements){
+
+const lat2 =
+element.lat ??
+element.center?.lat;
+
+const lon2 =
+element.lon ??
+element.center?.lon;
+
+if(!lat2 || !lon2) continue;
+
+const d = Math.sqrt(
+
+(lat-lat2)**2 +
+
+(lon-lon2)**2
+
 )*111;
 
-return distance;
+if(d < minDistance)
+minDistance = d;
 
 }
 
-catch {
+return minDistance;
+
+}
+
+}
+catch{}
+
+
+/*
+fallback coastal estimator
+*/
+
+if(elevation < 30)
+return 10;
+
+if(elevation < 80)
+return 40;
+
+if(elevation < 150)
+return 90;
 
 return 999;
-
-}
 
 };
 
 
+
 export function getCoastalInfluenceScore(distance){
 
-if(distance < 1) return 3;
+if(distance < 20) return 3;
 
-if(distance < 3) return 2;
+if(distance < 80) return 2;
 
-if(distance < 7) return 1;
+if(distance < 150) return 1;
 
 return 0;
 

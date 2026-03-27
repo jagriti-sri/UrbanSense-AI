@@ -22,7 +22,7 @@ async (lat, lon) => {
 
 
         const hourlyRain =
-        forecastData.hourly.precipitation.slice(0,72);
+forecastData.hourly?.precipitation?.slice(0,72) ?? Array(72).fill(0);
 
 
         const rain_next_72h =

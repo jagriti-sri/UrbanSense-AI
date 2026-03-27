@@ -1,5 +1,5 @@
 import { getDistanceFromSea, getCoastalInfluenceScore } from "./coastal.service.js";
-import { getDistanceFromRiver } from "./river.service.js";
+import { getDistanceFromRiver, getRiverInfluenceScore } from "./river.service.js";
 import { getSoilFactor } from "./soil.service.js";
 import { getTerrainData } from "./terrain.service.js";
 import { getUrbanFloodFactor } from "./urban.service.js";
@@ -12,14 +12,35 @@ export default async function generatePrediction(lat, lon) {
 
     const terrain = await getTerrainData(lat, lon);
 
-    const distanceFromRiver = await getDistanceFromRiver(lat, lon);
+    // extract elevation + slope correctly
+    const elevation = terrain.elevation;
+    const slope = terrain.slope;
 
-    const distanceFromSea = await getDistanceFromSea(lat, lon);
+    // now safe to call river service
+    const distanceFromRiver =
+        await getDistanceFromRiver(
+            lat,
+            lon,
+            elevation,
+            slope
+        );
+
+    const riverInfluenceScore =
+        getRiverInfluenceScore(distanceFromRiver);
+
+    // now safe to call coastal service
+    const distanceFromSea =
+        await getDistanceFromSea(
+            lat,
+            lon,
+            elevation
+        );
 
     const coastalInfluenceScore =
         getCoastalInfluenceScore(distanceFromSea);
 
-    const soilFactor = await getSoilFactor(lat, lon);
+    const soilFactor =
+        await getSoilFactor(lat, lon);
 
     const urbanFloodFactor =
         await getUrbanFloodFactor(lat, lon);
@@ -27,21 +48,19 @@ export default async function generatePrediction(lat, lon) {
     const historicalFloodScore =
         await getHistoricalFloodScore(lat, lon);
 
-
     return {
 
         ...rainfall,
         ...terrain,
 
         distanceFromRiver,
+        riverInfluenceScore,
 
         distanceFromSea,
         coastalInfluenceScore,
 
         soilFactor,
-
         urbanFloodFactor,
-
         historicalFloodScore
 
     };
