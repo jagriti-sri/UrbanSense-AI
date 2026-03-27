@@ -1,3 +1,4 @@
+
 # UrbanSense-AI 🌍
 
 UrbanSense-AI is a Smart City Environmental Intelligence Platform designed to monitor, analyze, and predict urban environmental risks using data-driven and AI-based methods.
@@ -101,4 +102,7 @@ The system supports both authorities and citizens in taking preventive and corre
 This repository currently focuses on building a complete system interface.  
 Backend and AI modules will be integrated in later development phases.
 
+
+=======
+# UrbanSense-AI
 
