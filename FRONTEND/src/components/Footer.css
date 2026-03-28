@@ -1,0 +1,9 @@
+.footer {
+  background: #1f2937;
+  color: white;
+  text-align: center;
+  padding: 40px 20px;
+}
+.footer__brand { font-family: 'Baloo 2', cursive; font-size: 30px; margin-bottom: 10px; }
+.footer__links { display: flex; justify-content: center; gap: 16px; margin-top: 16px; flex-wrap: wrap; }
+.footer__links a { color: #d1d5db; }

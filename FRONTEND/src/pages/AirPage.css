@@ -1,0 +1,18 @@
+.big-metric-card {
+  background: white;
+  margin-top: 20px;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+.metric-kicker { color: var(--gray-500); font-size: 13px; letter-spacing: 1px; }
+.big-metric-card h2 { margin: 8px 0; font-size: 88px; font-family: 'Baloo 2', cursive; color: var(--yellow); }
+.metric-meta { margin-top: 12px; color: var(--gray-500); }
+.air-next { font-size: 48px; font-family: 'Baloo 2', cursive; color: var(--teal-dark); }
+.advice-list { display: grid; gap: 10px; }
+.advice-list p { margin: 0; padding: 12px; background: var(--gray-100); border-radius: 12px; }
+.trend-list { display: grid; gap: 10px; }
+.trend-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 12px; align-items: center; }
+.trend-track { background: var(--gray-100); height: 10px; border-radius: 999px; overflow: hidden; }
+.trend-track div { height: 100%; background: linear-gradient(90deg, #facc15, #f97316); border-radius: 999px; }
