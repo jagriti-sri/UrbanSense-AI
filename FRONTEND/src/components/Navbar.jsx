@@ -6,7 +6,7 @@ const navItems = [
   ['/auth', 'Login'],
   ['/dashboard', 'Dashboard'],
   ['/air', 'Air'],
-  ['/rainfall', 'Rainfall'],
+  ['/flood', 'Flood Risk'],
   ['/waste', 'Waste'],
   ['/land', 'Land'],
   ['/about', 'About'],
@@ -32,8 +32,7 @@ export default function Navbar() {
             <NavLink
               key={path}
               to={path}
-              className={({ isActive }) =>
-                isActive || (path === '/' && location.pathname === '/') ? 'active' : ''
+              className={({ isActive }) => (isActive ? 'active' : '')
               }
             >
               {label}

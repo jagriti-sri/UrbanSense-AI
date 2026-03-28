@@ -2,7 +2,7 @@ export const summaryCards = [
   { icon: '🌬️', title: "Today's AQI", value: '87', unit: 'AQI', status: 'Moderate', tone: 'caution', path: '/air' },
   { icon: '🔮', title: 'Tomorrow AQI', value: '62', unit: 'AQI', status: 'Good', tone: 'safe', path: '/air' },
   { icon: '🌧️', title: 'Rain Chance', value: '40', unit: '%', status: 'Watch', tone: 'info', path: '/rainfall' },
-  { icon: '🌊', title: 'Flood Risk', value: 'Low', unit: '', status: 'Safe', tone: 'safe', path: '/rainfall' },
+  { icon: '🌊', title: 'Flood Risk', value: 'Low', unit: '', status: 'Safe', tone: 'safe', path: '/flood' },
   { icon: '♻️', title: 'Waste Complaints', value: '2', unit: '', status: 'Pending', tone: 'caution', path: '/waste' },
   { icon: '🗺️', title: 'Land Alerts', value: '1', unit: '', status: 'Review', tone: 'danger', path: '/land' },
 ];

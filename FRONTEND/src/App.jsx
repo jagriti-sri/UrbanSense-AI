@@ -10,6 +10,7 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
+import FloodRiskPage from "./pages/FloodRiskPage";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/air" element={<AirPage />} />
+        <Route path="/flood" element={<FloodRiskPage />} />
         <Route path="/rainfall" element={<RainfallPage />} />
         <Route path="/waste" element={<WastePage />} />
         <Route path="/land" element={<LandPage />} />

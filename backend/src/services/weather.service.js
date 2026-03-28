@@ -1,130 +1,221 @@
-import { getNASARainfallAccumulation }
-from "./nasaRainfall.service.js";
+import RainfallCache from "../modules/flood/rainfallCache.model.js";
 
+import {
+getForecastRainfall
+} from "./nasaRainfall.service.js";
+
+
+const CACHE_DURATION =
+6 * 60 * 60 * 1000;
+
+
+/*
+OPEN-METEO HISTORICAL RAINFALL
+(last 72h)
+*/
+
+const getOpenMeteoPastRainfall =
+async (lat, lon) => {
+
+try{
+
+const today =
+new Date();
+
+const end =
+today.toISOString().split("T")[0];
+
+const start =
+new Date(today);
+
+start.setDate(today.getDate()-3);
+
+const startDate =
+start.toISOString().split("T")[0];
+
+
+const url =
+`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${startDate}&end_date=${end}&daily=precipitation_sum&timezone=auto`;
+
+
+const response =
+await fetch(url);
+
+const data =
+await response.json();
+
+
+const rainfall =
+data?.daily?.precipitation_sum ?? [];
+
+
+/*
+SAFE SUM
+*/
+
+const totalRainfall =
+rainfall.reduce(
+(a,b)=>a+b,
+0
+);
+
+
+/*
+REMOVE MICRO-NOISE (<2mm considered dry)
+*/
+
+return totalRainfall < 2
+? 0
+: Number(totalRainfall.toFixed(2));
+
+}
+
+catch(err){
+
+console.log(
+"OpenMeteo rainfall failed"
+);
+
+return 0;
+
+}
+
+};
+
+
+
+/*
+MAIN SERVICE
+*/
 
 export const getRainForecast =
 async (lat, lon) => {
 
-    try {
+lat =
+Number(lat.toFixed(3));
 
-        /*
-        OPEN-METEO HOURLY FORECAST
-        */
-
-        const forecastURL =
-        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=precipitation`;
-
-        const forecastResponse =
-        await fetch(forecastURL);
-
-        const forecastData =
-        await forecastResponse.json();
+lon =
+Number(lon.toFixed(3));
 
 
-        const hourlyRain =
-forecastData.hourly?.precipitation?.slice(0,72) ?? Array(72).fill(0);
+/*
+STEP 1 — CACHE CHECK
+*/
+
+const cached =
+await RainfallCache.findOne({ lat, lon });
+
+if(
+
+cached &&
+
+Date.now() -
+cached.updatedAt
+< CACHE_DURATION
+
+){
+
+console.log(
+"Using cached rainfall"
+);
+
+return cached.data;
+
+}
 
 
-        const rain_next_72h =
-        hourlyRain.reduce((a,b)=>a+b,0);
+/*
+STEP 2 — FETCH LIVE DATA
+*/
+
+let rain_last_72h =
+await getOpenMeteoPastRainfall(lat, lon);
 
 
-        /*
-        MAX HOURLY BURST LAST 24 HOURS
-        */
+/*
+FORECAST RAINFALL
+*/
 
-        const rain_last_1h_peak =
-        Math.max(...hourlyRain.slice(0,24));
+let rain_next_72h =
+await getForecastRainfall(lat, lon);
 
-
-        /*
-        NASA SATELLITE RAIN LAST 72 HOURS
-        */
-
-        const rain_last_72h =
-        await getNASARainfallAccumulation(lat,lon);
+rain_next_72h =
+Number(rain_next_72h.toFixed(2));
 
 
-        /*
-        NASA SATELLITE RAIN LAST 7 DAYS
-        */
+/*
+STEP 3 — DERIVED VALUES
+*/
 
-        const today =
-        new Date();
+let rain_last_24h =
+Number(
+(rain_last_72h * 0.4)
+.toFixed(2)
+);
 
-        const formatDate =
-        d => d.toISOString().split("T")[0].replace(/-/g,"");
-
-
-        const start7 =
-        new Date(today);
-
-        start7.setDate(today.getDate()-7);
+if(rain_last_24h < 1)
+rain_last_24h = 0;
 
 
-        const nasa7URL =
-        `https://power.larc.nasa.gov/api/temporal/daily/point?parameters=PRECTOT&community=RE&longitude=${lon}&latitude=${lat}&format=JSON&start=${formatDate(start7)}&end=${formatDate(today)}`;
+let rain_last_7days =
+Number(
+(rain_last_72h * 1.8)
+.toFixed(2)
+);
+
+if(rain_last_7days < 1)
+rain_last_7days = 0;
 
 
-        const nasa7Response =
-        await fetch(nasa7URL);
 
-        const nasa7Data =
-        await nasa7Response.json();
+/*
+STEP 4 — PACKAGE OUTPUT
+*/
 
+const rainfallData = {
 
-        const rainfall7days =
-        Object.values(
-        nasa7Data.properties.parameter.PRECTOT
-        );
+rain_last_1h_peak: 0,
 
+rain_last_24h,
 
-        const rain_last_7days =
-        rainfall7days.reduce((a,b)=>a+b,0);
+rain_last_72h,
 
+rain_last_7days,
 
-        /*
-        NASA SATELLITE RAIN LAST 24 HOURS
-        */
+rain_next_72h
 
-        const rain_last_24h =
-        rainfall7days[
-        rainfall7days.length-1
-        ] ?? 0;
+};
 
 
-        return {
+/*
+STEP 5 — CACHE STORE
+*/
 
-            rain_last_1h_peak,
+await RainfallCache.findOneAndUpdate(
 
-            rain_last_24h,
+{ lat, lon },
 
-            rain_last_72h,
+{
 
-            rain_last_7days,
+lat,
+lon,
 
-            rain_next_72h
+data: rainfallData,
 
-        };
+updatedAt: Date.now()
 
-    }
+},
 
-    catch {
+{ upsert:true }
 
-        return {
+);
 
-            rain_last_1h_peak:0,
 
-            rain_last_24h:0,
+console.log(
+"OpenMeteo rainfall fetched"
+);
 
-            rain_last_72h:0,
 
-            rain_last_7days:0,
-
-            rain_next_72h:0
-
-        };
-
-    }
+return rainfallData;
 
 };
