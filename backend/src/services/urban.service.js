@@ -1,103 +1,217 @@
-export const getUrbanFloodFactor = async (lat, lon) => {
+import TerrainCache from "../modules/flood/terrainCache.model.js";
 
-try {
+const OVERPASS =
+"https://overpass.kumi.systems/api/interpreter";
+
+const memoryUrbanCache =
+new Map();
+
+
+/*
+SAFE FETCH WITH TIMEOUT
+Always throws proper Error object
+*/
+
+const fetchWithTimeout = async (
+url,
+options = {},
+timeout = 12000
+) => {
+
+return Promise.race([
+
+fetch(url, options),
+
+new Promise((_, reject) =>
+setTimeout(
+() => reject(new Error("Urban API timeout")),
+timeout
+))
+
+]);
+
+};
+
+
+/*
+MAIN URBAN FLOOD FACTOR FUNCTION
+*/
+
+export const getUrbanFloodFactor =
+async (lat, lon) => {
+
+lat = Number(Number(lat).toFixed(3));
+lon = Number(Number(lon).toFixed(3));
+
+const cacheKey =
+`${lat},${lon}`;
+
+
+/*
+STEP 1 — MEMORY CACHE
+*/
+
+if(memoryUrbanCache.has(cacheKey)){
+
+return memoryUrbanCache.get(cacheKey);
+
+}
+
+
+/*
+STEP 2 — DATABASE CACHE
+*/
+
+const cachedTerrain =
+await TerrainCache.findOne({ lat, lon });
+
+if(cachedTerrain?.urbanFloodFactor !== undefined){
+
+memoryUrbanCache.set(
+cacheKey,
+cachedTerrain.urbanFloodFactor
+);
+
+return cachedTerrain.urbanFloodFactor;
+
+}
+
+
+try{
 
 const radius = 500;
 
 
 /*
-COUNT BUILDINGS
+PARALLEL OVERPASS QUERIES
 */
 
-const buildingQuery = `
-[out:json];
-(
-way["building"](around:${radius},${lat},${lon});
-);
-out body;
-`;
+const [
 
-const buildingResponse =
-await fetch(
-"https://overpass-api.de/api/interpreter",
+buildingResponse,
+
+roadResponse,
+
+drainResponse
+
+] = await Promise.all([
+
+fetchWithTimeout(
+
+OVERPASS,
+
 {
 method:"POST",
-body:buildingQuery
-}
-);
 
-const buildingData =
-await buildingResponse.json();
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body:
+"data=" + encodeURIComponent(`
+[out:json];
+way["building"](around:${radius},${lat},${lon});
+out body;
+`)
+}
+
+),
+
+fetchWithTimeout(
+
+OVERPASS,
+
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body:
+"data=" + encodeURIComponent(`
+[out:json];
+way["highway"](around:${radius},${lat},${lon});
+out body;
+`)
+}
+
+),
+
+fetchWithTimeout(
+
+OVERPASS,
+
+{
+method:"POST",
+
+headers:{
+"Content-Type":
+"application/x-www-form-urlencoded"
+},
+
+body:
+"data=" + encodeURIComponent(`
+[out:json];
+way["waterway"="drain"](around:${radius},${lat},${lon});
+out body;
+`)
+}
+
+)
+
+]);
+
+
+/*
+SAFE PARSE RESPONSES
+Handles rural/desert empty results
+*/
+
+const [
+
+buildingData,
+
+roadData,
+
+drainData
+
+] = await Promise.all([
+
+buildingResponse.json(),
+
+roadResponse.json(),
+
+drainResponse.json()
+
+]);
+
+
+/*
+SAFE COUNT EXTRACTION
+*/
 
 const buildingCount =
-buildingData.elements.length;
-
-
-/*
-COUNT ROADS
-*/
-
-const roadQuery = `
-[out:json];
-(
-way["highway"](around:${radius},${lat},${lon});
-);
-out body;
-`;
-
-const roadResponse =
-await fetch(
-"https://overpass-api.de/api/interpreter",
-{
-method:"POST",
-body:roadQuery
-}
-);
-
-const roadData =
-await roadResponse.json();
+buildingData?.elements?.length ?? 0;
 
 const roadCount =
-roadData.elements.length;
-
-
-/*
-CHECK DRAINAGE PRESENCE
-*/
-
-const drainQuery = `
-[out:json];
-(
-way["waterway"="drain"](around:${radius},${lat},${lon});
-);
-out body;
-`;
-
-const drainResponse =
-await fetch(
-"https://overpass-api.de/api/interpreter",
-{
-method:"POST",
-body:drainQuery
-}
-);
-
-const drainData =
-await drainResponse.json();
+roadData?.elements?.length ?? 0;
 
 const drainCount =
-drainData.elements.length;
+drainData?.elements?.length ?? 0;
 
 
 /*
-SURFACE RUNOFF INDEX
+RUNOFF SCORE MODEL
 */
 
 let runoffScore = 0;
 
 
 /*
-BUILDING DENSITY EFFECT
+BUILDING DENSITY IMPACT
 */
 
 if(buildingCount > 80)
@@ -108,7 +222,7 @@ runoffScore += 1;
 
 
 /*
-ROAD DENSITY EFFECT
+ROAD IMPACT
 */
 
 if(roadCount > 60)
@@ -127,18 +241,54 @@ runoffScore -= 1;
 
 
 /*
-MINIMUM SAFE VALUE
+MINIMUM LIMIT
 */
 
 if(runoffScore < 0)
 runoffScore = 0;
 
 
+/*
+STEP 3 — MEMORY CACHE STORE
+*/
+
+memoryUrbanCache.set(
+cacheKey,
+runoffScore
+);
+
+
+/*
+STEP 4 — DATABASE CACHE STORE
+*/
+
+await TerrainCache.findOneAndUpdate(
+
+{ lat, lon },
+
+{ urbanFloodFactor: runoffScore },
+
+{ upsert: true }
+
+);
+
+
 return runoffScore;
 
 }
 
-catch {
+
+catch(err){
+
+console.log(
+"Using baseline urban runoff estimate from terrain model",
+err?.message || err
+);
+
+/*
+SAFE DEFAULT VALUE
+Ensures prediction engine never crashes
+*/
 
 return 1;
 

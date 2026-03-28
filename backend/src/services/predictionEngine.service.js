@@ -1,68 +1,198 @@
-import { getDistanceFromSea, getCoastalInfluenceScore } from "./coastal.service.js";
-import { getDistanceFromRiver, getRiverInfluenceScore } from "./river.service.js";
+import TerrainCache from "../modules/flood/terrainCache.model.js";
+
+import { calculateSlope } from "./terrain.service.js";
+import { getDistanceFromRiver } from "./river.service.js";
+import { getDistanceFromSea } from "./coastal.service.js";
 import { getSoilFactor } from "./soil.service.js";
-import { getTerrainData } from "./terrain.service.js";
 import { getUrbanFloodFactor } from "./urban.service.js";
-import { getRainfallData } from "./weather.service.js";
 import { getHistoricalFloodScore } from "./historicalFlood.service.js";
 
-export default async function generatePrediction(lat, lon) {
 
-    const rainfall = await getRainfallData(lat, lon);
+export default async function generatePrediction(lat, lon){
 
-    const terrain = await getTerrainData(lat, lon);
+lat = Number(Number(lat).toFixed(3));
+lon = Number(Number(lon).toFixed(3));
 
-    // extract elevation + slope correctly
-    const elevation = terrain.elevation;
-    const slope = terrain.slope;
 
-    // now safe to call river service
-    const distanceFromRiver =
-        await getDistanceFromRiver(
-            lat,
-            lon,
-            elevation,
-            slope
-        );
+let cached =
+await TerrainCache.findOne({ lat, lon });
 
-    const riverInfluenceScore =
-        getRiverInfluenceScore(distanceFromRiver);
 
-    // now safe to call coastal service
-    const distanceFromSea =
-        await getDistanceFromSea(
-            lat,
-            lon,
-            elevation
-        );
+if(!cached){
 
-    const coastalInfluenceScore =
-        getCoastalInfluenceScore(distanceFromSea);
+cached = {};
 
-    const soilFactor =
-        await getSoilFactor(lat, lon);
+}
 
-    const urbanFloodFactor =
-        await getUrbanFloodFactor(lat, lon);
 
-    const historicalFloodScore =
-        await getHistoricalFloodScore(lat, lon);
+/*
+STEP 1 — elevation baseline
+*/
 
-    return {
+const elevation =
+cached.elevation ?? 500;
 
-        ...rainfall,
-        ...terrain,
 
-        distanceFromRiver,
-        riverInfluenceScore,
+/*
+STEP 2 — slope
+*/
 
-        distanceFromSea,
-        coastalInfluenceScore,
+let slope = cached.slope;
 
-        soilFactor,
-        urbanFloodFactor,
-        historicalFloodScore
+if(slope === undefined){
 
-    };
+console.log("Computing slope once");
+
+slope =
+await calculateSlope(lat, lon);
+
+}
+
+
+/*
+STEP 3 — river distance
+*/
+
+let distanceFromRiver =
+cached.distanceFromRiver;
+
+if(distanceFromRiver === undefined){
+
+console.log("Computing river distance once");
+
+distanceFromRiver =
+await getDistanceFromRiver(
+lat,
+lon,
+elevation,
+slope
+);
+
+}
+
+
+/*
+STEP 4 — sea distance
+*/
+
+let distanceFromSea =
+cached.distanceFromSea;
+
+if(distanceFromSea === undefined){
+
+distanceFromSea =
+await getDistanceFromSea(
+lat,
+lon,
+elevation
+);
+
+}
+
+
+/*
+STEP 5 — soil factor
+*/
+
+let soilFactor =
+cached.soilFactor;
+
+if(soilFactor === undefined){
+
+soilFactor =
+await getSoilFactor(lat, lon);
+
+}
+
+
+/*
+STEP 6 — urban flood factor
+*/
+
+let urbanFloodFactor =
+cached.urbanFloodFactor;
+
+if(urbanFloodFactor === undefined){
+
+urbanFloodFactor =
+await getUrbanFloodFactor(lat, lon);
+
+}
+
+
+/*
+STEP 7 — historical flood score
+*/
+
+let historicalFloodScore =
+cached.historicalFloodScore;
+
+if(historicalFloodScore === undefined){
+
+historicalFloodScore =
+await getHistoricalFloodScore(
+lat,
+lon,
+elevation,
+distanceFromRiver
+);
+
+}
+
+
+/*
+STEP 8 — SAVE UPDATED CACHE
+*/
+
+await TerrainCache.findOneAndUpdate(
+
+{ lat, lon },
+
+{
+
+lat,
+lon,
+
+elevation,
+
+slope,
+
+distanceFromRiver,
+
+distanceFromSea,
+
+soilFactor,
+
+urbanFloodFactor,
+
+historicalFloodScore
+
+},
+
+{ upsert:true }
+
+);
+
+
+console.log("Using cached terrain intelligence");
+
+
+return {
+
+elevation,
+
+slope,
+
+distanceFromRiver,
+
+distanceFromSea,
+
+soilFactor,
+
+urbanFloodFactor,
+
+historicalFloodScore
+
+};
 
 }

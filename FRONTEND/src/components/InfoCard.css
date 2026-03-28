@@ -1,0 +1,13 @@
+.info-card {
+  background: white;
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+  padding: 22px;
+  display: block;
+  box-shadow: var(--shadow);
+}
+.info-card__top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+.info-card__icon { font-size: 32px; }
+.info-card__value { font-size: 38px; font-weight: 800; font-family: 'Baloo 2', cursive; }
+.info-card__value small { font-size: 14px; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--gray-500); }
+.info-card__title { color: var(--gray-700); }

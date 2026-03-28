@@ -1,0 +1,14 @@
+.dashboard-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  background: linear-gradient(135deg, var(--teal), var(--green));
+  color: white;
+  border-radius: 24px;
+  padding: 28px;
+}
+.dashboard-banner h1 { margin: 0 0 6px; font-family: 'Baloo 2', cursive; font-size: 34px; }
+.dashboard-banner__icon { font-size: 56px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+@media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }

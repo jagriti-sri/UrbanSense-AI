@@ -1,0 +1,6 @@
+.details-list { display: grid; gap: 10px; }
+.details-list p { margin: 0; padding: 12px 14px; background: var(--gray-100); border-radius: 12px; }
+.profile-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.profile-stat-card { background: var(--gray-100); border-radius: 14px; padding: 18px; text-align: center; }
+.profile-stat-card strong { display: block; font-size: 32px; font-family: 'Baloo 2', cursive; }
+.profile-stat-card span { color: var(--gray-500); }

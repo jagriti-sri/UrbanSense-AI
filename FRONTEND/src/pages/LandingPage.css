@@ -1,0 +1,31 @@
+.landing-hero {
+  background: linear-gradient(135deg, #0a5f5f 0%, #0d7c7c 40%, #1a9e7a 100%);
+  color: white;
+  padding: 70px 0;
+}
+.landing-hero__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px;
+  align-items: center;
+}
+.landing-hero h1 { margin: 0; font-size: 72px; font-family: 'Baloo 2', cursive; }
+.landing-hero__hindi { font-family: 'Noto Sans Devanagari', sans-serif; font-size: 24px; margin: 10px 0; }
+.landing-hero__text { max-width: 560px; line-height: 1.8; }
+.landing-hero__actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 20px; }
+.landing-hero__card {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  backdrop-filter: blur(8px);
+  border-radius: 24px;
+  padding: 28px;
+}
+.city-illustration { font-size: 72px; margin-bottom: 14px; }
+.landing-features { padding: 60px 20px 90px; }
+.landing-features__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.landing-feature { background: white; border-radius: 18px; padding: 22px; text-align: center; box-shadow: var(--shadow); }
+.landing-feature span { font-size: 44px; display: block; margin-bottom: 12px; }
+@media (max-width: 800px) {
+  .landing-hero__grid, .landing-features__grid { grid-template-columns: 1fr; }
+  .landing-hero h1 { font-size: 56px; }
+}

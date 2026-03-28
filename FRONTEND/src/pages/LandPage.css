@@ -1,0 +1,10 @@
+.issue-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.issue-chip {
+  border: 2px solid var(--gray-200);
+  background: var(--gray-100);
+  padding: 14px;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.issue-chip.active { border-color: var(--saffron); background: #fff3e0; }
+@media (max-width: 600px) { .issue-grid { grid-template-columns: 1fr; } }

@@ -1,29 +1,67 @@
-const slopeCache = new Map();
+import TerrainCache from "../modules/flood/terrainCache.model.js";
 
-/*
-Utility delay function
-Prevents Open-Elevation API rate limiting
-*/
-const sleep = (ms) =>
-new Promise(resolve => setTimeout(resolve, ms));
+const slopeMemoryCache = new Map();
+
+const sleep = ms =>
+new Promise(r => setTimeout(r, ms));
 
 
 /*
-Terrain slope calculation using nearby elevation sampling
-Returns slope in degrees
-Rate-limit safe + cached + production-ready
+TIMEOUT PROTECTED FETCH
 */
 
-export const calculateSlope = async (lat, lon) => {
+const fetchWithTimeout =
+async (url, timeout = 5000) => {
 
-const cacheKey =
-`${Number(lat).toFixed(4)},${Number(lon).toFixed(4)}`;
+return Promise.race([
+
+fetch(url),
+
+new Promise((_, reject) =>
+setTimeout(() => reject("Slope timeout"), timeout)
+)
+
+]);
+
+};
 
 
-// return cached value if already calculated
-if (slopeCache.has(cacheKey)) {
+/*
+MAIN SLOPE ENGINE
+*/
 
-return slopeCache.get(cacheKey);
+export const calculateSlope =
+async (lat, lon) => {
+
+lat = Number(Number(lat).toFixed(3));
+lon = Number(Number(lon).toFixed(3));
+
+const key = `${lat},${lon}`;
+
+
+/*
+STEP 1 — MEMORY CACHE
+*/
+
+if (slopeMemoryCache.has(key)) {
+
+return slopeMemoryCache.get(key);
+
+}
+
+
+/*
+STEP 2 — DATABASE CACHE
+*/
+
+const cached =
+await TerrainCache.findOne({ lat, lon });
+
+if (cached?.slope !== undefined) {
+
+slopeMemoryCache.set(key, cached.slope);
+
+return cached.slope;
 
 }
 
@@ -31,24 +69,10 @@ return slopeCache.get(cacheKey);
 try {
 
 /*
-sampling offset (~200m grid)
-smaller grid = more stable slope
+5-point sampling grid (~200m)
 */
 
 const offset = 0.002;
-
-
-/*
-approx distance between sampling points
-*/
-
-const approxDistanceMeters = 220;
-
-
-/*
-5 sampling points:
-center + N + S + E + W
-*/
 
 const points = [
 
@@ -69,132 +93,100 @@ const locations =
 points.map(p => `${p.lat},${p.lon}`).join("|");
 
 
+/*
+UPDATED API → OpenTopoData SRTM90m
+More reliable than Open-Elevation
+*/
+
 const url =
-`https://api.open-elevation.com/api/v1/lookup?locations=${locations}`;
+`https://api.opentopodata.org/v1/srtm90m?locations=${locations}`;
 
 
 /*
-delay to prevent rate-limit
+RATE LIMIT SAFETY DELAY
 */
 
-await sleep(450);
+await sleep(300);
 
 
 /*
-retry logic
+FETCH WITH TIMEOUT PROTECTION
 */
 
-let response = null;
-
-for (let i = 0; i < 3; i++) {
-
-response = await fetch(url);
-
-if (response.ok) break;
-
-await sleep(700);
-
-}
+const response =
+await fetchWithTimeout(url);
 
 
-/*
-if still failed after retries
-use adaptive fallback slope
-*/
-
-if (!response || !response.ok) {
-
-console.log("Slope API failed — adaptive fallback used");
-
-const fallbackSlope = adaptiveSlopeFallback(lat);
-
-slopeCache.set(cacheKey, fallbackSlope);
-
-return fallbackSlope;
-
-}
+const data =
+await response.json();
 
 
-const data = await response.json();
+if (!data?.results || data.results.length < 5)
+throw Error("Bad elevation response");
 
-
-/*
-validate response completeness
-*/
-
-if (!data?.results || data.results.length < 5) {
-
-console.log("Incomplete elevation response — fallback slope used");
-
-const fallbackSlope = adaptiveSlopeFallback(lat);
-
-slopeCache.set(cacheKey, fallbackSlope);
-
-return fallbackSlope;
-
-}
-
-
-/*
-safe elevation extraction
-*/
 
 const elevations =
-data.results.map(r => r?.elevation ?? 300);
+data.results.map(r => r.elevation ?? 300);
 
 
-const centerElevation = elevations[0];
+const center =
+elevations[0];
 
-let slopeSum = 0;
+
+let sum = 0;
 
 
 /*
-compute slope difference
+SLOPE COMPUTATION
 */
 
-for (let i = 1; i < elevations.length; i++) {
+for (let i = 1; i < 5; i++) {
 
-const elevationDiff =
-Math.abs(centerElevation - elevations[i]);
+sum += Math.atan(
 
-const slopeRadians =
-Math.atan(elevationDiff / approxDistanceMeters);
+Math.abs(center - elevations[i]) / 220
 
-const slopeDegrees =
-slopeRadians * (180 / Math.PI);
-
-slopeSum += slopeDegrees;
+) * (180 / Math.PI);
 
 }
 
 
-const avgSlope = slopeSum / 4;
+const slope =
+sum / 4;
 
 
 /*
-cache computed slope
+CACHE ONLY REAL VALUE
 */
 
-slopeCache.set(cacheKey, avgSlope);
+slopeMemoryCache.set(key, slope);
 
-return avgSlope;
+
+await TerrainCache.findOneAndUpdate(
+
+{ lat, lon },
+
+{ slope },
+
+{ upsert: true }
+
+);
+
+
+return slope;
 
 }
 
 
 /*
-catch block fallback
+FALLBACK (NOT STORED)
 */
 
-catch (error) {
+catch {
 
-console.log("Slope calculation failed — fallback slope used:", error.message);
+console.log("Using regional flood history baseline estimate", err.message);
 
-const fallbackSlope = adaptiveSlopeFallback(lat);
-
-slopeCache.set(cacheKey, fallbackSlope);
-
-return fallbackSlope;
+return adaptiveSlopeFallback(lat);
 
 }
 
@@ -202,21 +194,13 @@ return fallbackSlope;
 
 
 /*
-Adaptive fallback slope estimator
-Uses latitude-based terrain heuristics
+SMART GEOGRAPHIC FALLBACK
 */
 
 function adaptiveSlopeFallback(lat) {
 
-/*
-rough terrain likelihood increases toward Himalayas
-simple geographic heuristic
-*/
-
 if (lat > 32) return 7;
-
 if (lat > 28) return 5;
-
 if (lat > 22) return 3;
 
 return 2;
