@@ -1,5 +1,7 @@
 const wait = (ms = 400) => new Promise((resolve) => setTimeout(resolve, ms));
+const BASE_URL = "http://127.0.0.1:5000";
 
+export default BASE_URL;
 export async function submitWasteReport(payload) {
   await wait();
   return { success: true, message: 'Waste report submitted successfully.', payload };
