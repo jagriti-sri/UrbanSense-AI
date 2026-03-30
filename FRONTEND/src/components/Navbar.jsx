@@ -29,19 +29,20 @@ export default function Navbar() {
         </NavLink>
 
         <nav className="navbar__links">
-          {navItems.map(([path, label]) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) => (isActive ? 'active' : '')
-              className={({ isActive }) =>
-                isActive || (path === '/' && location.pathname === '/') ? 'active' : ''
-              }
-            >
-              {label}
-            </NavLink>
-          ))}
-        </nav>
+  {navItems.map(([path, label]) => (
+    <NavLink
+      key={path}
+      to={path}
+      className={({ isActive }) =>
+        isActive || (path === '/' && location.pathname === '/')
+          ? 'active'
+          : ''
+      }
+    >
+      {label}
+    </NavLink>
+  ))}
+</nav>
       </div>
     </header>
   );
