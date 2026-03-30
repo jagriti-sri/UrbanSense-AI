@@ -16,3 +16,10 @@ export async function submitContactForm(payload) {
   await wait();
   return { success: true, message: 'Support request submitted.', payload };
 }
+
+export const getFloodPrediction = async (lat, lon) => {
+  const res = await fetch(
+    `${BASE_URL}/api/flood/predict?lat=${lat}&lon=${lon}`
+  );
+  return res.json();
+};
