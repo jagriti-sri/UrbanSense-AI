@@ -2,52 +2,22 @@ import Flood from "./flood.model.js";
 import { execFile } from "child_process";
 
 import { getRainForecast } from "../../services/weather.service.js";
-import { calculateSlope } from "../../services/terrain.service.js";
-import { getSoilFactor } from "../../services/soil.service.js";
-import { getTerrainRoughness } from "../../services/roughness.service.js";
-import { getUrbanFloodFactor } from "../../services/urban.service.js";
+import generatePrediction from "../../services/predictionEngine.service.js";
 
 import {
-getDistanceFromRiver,
 getRiverInfluenceScore
 } from "../../services/river.service.js";
 
 import {
-getDistanceFromSea,
 getCoastalInfluenceScore
 } from "../../services/coastal.service.js";
 
 import {
-getHistoricalFloodScore
-} from "../../services/historicalFlood.service.js";
-
-
-/*
-Elevation service
-*/
-
-async function getElevation(lat, lon){
-
-try{
-
-const response =
-await fetch(
-`https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
-);
-
-const data = await response.json();
-
-return data.results?.[0]?.elevation ?? 300;
-
+getNASARainfallAccumulation,
+getForecastRainfall
 }
-
-catch{
-
-return 300;
-
-}
-
-}
+from "../../services/nasaRainfall.service.js";
+console.log("Rainfall service loaded");
 
 
 /*
@@ -92,45 +62,33 @@ if(elevation < 120) score += 2;
 else if(elevation < 300) score += 1;
 
 if(elevation < 800){
+
 if(slope < 1.5) score += 2;
 else if(slope < 5) score += 1;
-}
-else{
+
+}else{
+
 if(slope < 1.5) score += 0.8;
+
 }
 
-if (elevation < 200)
-score += riverInfluenceScore * 1.3;
-else if (elevation < 600)
+
 score += riverInfluenceScore * 0.8;
-else
-score += riverInfluenceScore * 0.4;
-
-if (elevation < 200)
-score += coastalInfluenceScore * 1.3;
-else if (elevation < 600)
 score += coastalInfluenceScore * 0.6;
-else
-score += coastalInfluenceScore * 0.2;
+score += (soilFactor - 1) * 0.4;
 
-if (elevation < 800)
-score += soilFactor * 0.4;
-else
-score += soilFactor * 0.2;
 
-if (elevation < 800){
 if(terrainRoughness < 8) score += 1.2;
 else if(terrainRoughness < 20) score += 0.6;
-}
-else{
-if(terrainRoughness < 8) score += 0.4;
-}
 
-if (urbanFloodFactor > 1)
+
+if(urbanFloodFactor > 1)
 score += urbanFloodFactor * 0.6;
 
-if (historicalFloodScore > 1)
+
+if(historicalFloodScore > 1)
 score += historicalFloodScore * 0.6;
+
 
 return score;
 
@@ -160,107 +118,78 @@ else if(rain_last_24h > 25) factor += 0.3;
 if(rain_last_72h > 120) factor += 0.6;
 else if(rain_last_72h > 60) factor += 0.3;
 
+
 if(rain_last_7days > 200) factor += 0.6;
 else if(rain_last_7days > 100) factor += 0.3;
 
 if(rain_next_72h > 80) factor += 0.6;
 else if(rain_next_72h > 40) factor += 0.3;
 
-return factor;
+
 
 }
-
 
 /*
 MAIN PREDICTION ENGINE
 */
 
-export const predictFloodFromCoords = async (req,res)=>{
+export const predictFloodFromCoords = async (req, res) => {
 
-try{
+try {
 
-const { lat, lon } = req.query;
+const lat = Number(req.query.lat);
+const lon = Number(req.query.lon);
 
-
-/*
-CACHE CHECK
-*/
-
-const cachedPrediction =
-await Flood.findOne({
-latitude:Number(lat).toFixed(5),
-longitude:Number(lon).toFixed(5)
-});
-
-let terrainData = null;
-
-if(cachedPrediction){
-
-console.log("Using cached terrain features");
-
-terrainData = cachedPrediction;
-
-}
-
-if(!lat || !lon){
-
-return res.status(400).json({
-error:"Latitude & Longitude required"
-});
-
-}
+let fallbackCount = 0;
 
 
 /*
-PARALLEL FEATURE FETCH
+STEP 1 — RAINFALL
 */
 
-let elevation, slope, soilFactor, terrainRoughness, urbanFloodFactor;
+const rainData =
+await getRainForecast(lat, lon) || {
 
-const rainData = await getRainForecast(lat, lon);
+rain_last_1h_peak: 0,
+rain_last_24h: 0,
+rain_last_72h: 0,
+rain_last_7days: 0,
+rain_next_72h: 0
 
-if(terrainData){
-
-elevation = terrainData.elevation;
-slope = terrainData.slope;
-soilFactor = terrainData.soilFactor;
-terrainRoughness = terrainData.terrainRoughness;
-urbanFloodFactor = terrainData.urbanFloodFactor;
-
-}else{
-
-[
-elevation,
-slope,
-soilFactor,
-terrainRoughness,
-urbanFloodFactor
-] = await Promise.all([
-
-getElevation(lat, lon),
-calculateSlope(lat, lon),
-getSoilFactor(lat, lon),
-getTerrainRoughness(lat, lon),
-getUrbanFloodFactor(lat, lon)
-
-]);
-
-}
+};
 
 
 /*
-HYDROLOGY LOOKUP
+STEP 2 — TERRAIN INTELLIGENCE
 */
+
+const terrain =
+await generatePrediction(lat, lon) || {};
+
+const elevation =
+terrain.elevation ?? 250;
+
+const slope =
+terrain.slope ?? 3;
+
+const soilFactor =
+terrain.soilFactor ?? 1;
+
+const urbanFloodFactor =
+terrain.urbanFloodFactor ?? 1;
+
+const historicalFloodScore =
+terrain.historicalFloodScore ?? 0;
 
 const distanceFromRiver =
-await getDistanceFromRiver(lat,lon,elevation,slope);
+terrain.distanceFromRiver ?? 12;
 
 const distanceFromSea =
-await getDistanceFromSea(lat,lon,elevation);
+terrain.distanceFromSea ?? 999;
 
 
 /*
-INFLUENCE SCORES
+STEP 3 — INFLUENCE SCORES
 */
 
 const riverInfluenceScore =
@@ -271,24 +200,20 @@ getCoastalInfluenceScore(distanceFromSea);
 
 
 /*
-HISTORICAL FLOOD MEMORY
+STEP 4 — TERRAIN ROUGHNESS
 */
 
-const historicalFloodScore =
-await getHistoricalFloodScore(
-lat,
-lon,
-elevation,
-distanceFromRiver
-);
+const terrainRoughness =
+Math.abs(slope * 6);
 
 
 /*
-COMPUTE SUSCEPTIBILITY
+STEP 5 — SUSCEPTIBILITY SCORE
 */
 
 const susceptibilityScore =
 calculateSusceptibilityScore(
+
 elevation,
 slope,
 riverInfluenceScore,
@@ -297,119 +222,77 @@ soilFactor,
 terrainRoughness,
 urbanFloodFactor,
 historicalFloodScore
-);
+
+) || 0;
 
 
 /*
-COMPUTE RAINFALL TRIGGER
+STEP 6 — RAIN TRIGGER
 */
 
 const triggerFactor =
 rainfallTriggerFactor(
-rainData.rain_last_1h_peak,
-rainData.rain_last_24h,
-rainData.rain_last_72h,
-rainData.rain_last_7days,
-rainData.rain_next_72h
-);
+
+rainData.rain_last_1h_peak ?? 0,
+rainData.rain_last_24h ?? 0,
+rainData.rain_last_72h ?? 0,
+rainData.rain_last_7days ?? 0,
+rainData.rain_next_72h ?? 0
+
+) || 0;
 
 
 /*
-LEGACY PROBABILITY (kept for logging)
+STEP 7 — FINAL PROBABILITY
 */
 
-const riskProbability =
-Math.min(
+const riskProbability = Math.min(
+
 Math.round(
-susceptibilityScore * 10 +
-triggerFactor * 25
+(susceptibilityScore * 10) +
+(triggerFactor * 25)
 ),
+
 95
+
 );
 
 
 /*
-CONFIDENCE ENGINE
+STEP 8 — CONFIDENCE SCORE
 */
 
 const confidenceScore =
 calculateConfidenceScore(
+
 susceptibilityScore,
 triggerFactor,
 historicalFloodScore
-);
+
+) || 50;
 
 
 /*
-ML MODEL CLASSIFICATION
+STEP 9 — CLASSIFICATION
 */
 
-const features = [
+let riskLevel = "LOW";
 
-rainData.rain_last_1h_peak,
-rainData.rain_last_24h,
-rainData.rain_last_72h,
-rainData.rain_last_7days,
-rainData.rain_next_72h,
+if (riskProbability >= 70)
+riskLevel = "HIGH";
 
-elevation,
-slope,
-
-distanceFromRiver,
-distanceFromSea,
-
-riverInfluenceScore,
-coastalInfluenceScore,
-
-soilFactor,
-terrainRoughness,
-urbanFloodFactor,
-
-historicalFloodScore,
-
-susceptibilityScore,
-triggerFactor
-
-];
-
-
-const riskLevel = await new Promise((resolve,reject)=>{
-
-execFile(
-"python",
-[
-"ml-model/predict.py",
-JSON.stringify(features)
-],
-(error,stdout)=>{
-
-if(error){
-
-console.error("ML prediction failed:",error);
-
-reject(error);
-
-return;
-
-}
-
-resolve(stdout.trim());
-
-}
-
-);
-
-});
+else if (riskProbability >= 40)
+riskLevel = "MEDIUM";
 
 
 /*
-STORE DATASET ROW
+STEP 10 — SAVE DATASET
 */
 
 await Flood.create({
 
-latitude:Number(lat).toFixed(3),
-longitude:Number(lon).toFixed(3),
+latitude: lat.toFixed(3),
+longitude: lon.toFixed(3),
 
 ...rainData,
 
@@ -438,6 +321,22 @@ riskLevel
 
 });
 
+let dataConfidenceLevel = "HIGH";
+
+if (fallbackCount >= 3) {
+
+dataConfidenceLevel = "LIMITED";
+
+}
+
+else if (fallbackCount >= 1) {
+
+dataConfidenceLevel = "MODERATE";
+
+}
+/*
+STEP 11 — RESPONSE
+*/
 
 res.json({
 
@@ -464,7 +363,9 @@ triggerFactor,
 riskProbability,
 confidenceScore,
 
-riskLevel
+riskLevel,
+
+dataConfidenceLevel
 
 });
 
@@ -475,7 +376,7 @@ catch(error){
 console.error(error);
 
 res.status(500).json({
-error:"Prediction failed"
+error: "Prediction failed"
 });
 
 }
