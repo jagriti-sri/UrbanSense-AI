@@ -3,4 +3,9 @@ FRONTEND/node_modules/
 dist/
 build/
 .vite/
+venv/
+__pycache__/
+*.pyc
+uploads/
+qrcodes/
 .env

@@ -7,6 +7,7 @@ const navItems = [
   ['/dashboard', 'Dashboard'],
   ['/air', 'Air'],
   ['/flood', 'Flood Risk'],
+  ['/rainfall', 'Rainfall'],
   ['/waste', 'Waste'],
   ['/land', 'Land'],
   ['/about', 'About'],
@@ -33,6 +34,8 @@ export default function Navbar() {
               key={path}
               to={path}
               className={({ isActive }) => (isActive ? 'active' : '')
+              className={({ isActive }) =>
+                isActive || (path === '/' && location.pathname === '/') ? 'active' : ''
               }
             >
               {label}
