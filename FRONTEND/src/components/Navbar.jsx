@@ -13,13 +13,16 @@ const navItems = [
   ['/about', 'About'],
   ['/contact', 'Contact'],
   ['/profile', 'Profile'],
+  ['/admin', 'Admin'], // ✅ ADDED
 ];
 
 export default function Navbar() {
   const location = useLocation();
+
   return (
     <header className="navbar">
       <div className="navbar__inner">
+
         <NavLink to="/" className="navbar__brand">
           <div className="navbar__logo">🌿</div>
           <div>
@@ -29,20 +32,21 @@ export default function Navbar() {
         </NavLink>
 
         <nav className="navbar__links">
-  {navItems.map(([path, label]) => (
-    <NavLink
-      key={path}
-      to={path}
-      className={({ isActive }) =>
-        isActive || (path === '/' && location.pathname === '/')
-          ? 'active'
-          : ''
-      }
-    >
-      {label}
-    </NavLink>
-  ))}
-</nav>
+          {navItems.map(([path, label]) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={({ isActive }) =>
+                isActive || (path === '/' && location.pathname === '/')
+                  ? 'active'
+                  : ''
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
       </div>
     </header>
   );

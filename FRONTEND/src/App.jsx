@@ -12,6 +12,9 @@ import ProfilePage from './pages/ProfilePage';
 import AuthPage from './pages/AuthPage';
 import FloodRiskPage from "./pages/FloodRiskPage";
 
+
+import AdminPage from './pages/AdminPage';
+
 export default function App() {
   return (
     <Routes>
@@ -27,6 +30,7 @@ export default function App() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
     </Routes>
   );
